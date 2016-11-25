@@ -688,9 +688,8 @@ function install_ols
         local OLS_VERSION=
         local LATEST_VERSION=
         local REINSTALL=
-        OLS_VERSION=$(/usr/local/lsws/bin/lshttpd -v | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' | sed 's|[.]||g')
-        LATEST_VERSION=$(curl http://open.litespeedtech.com/mediawiki/ 2>/dev/null | grep "(Stable)")
-        LATEST_VERSION=$(grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' <<< "$LATEST_VERSION" | head -n1 | sed 's|[.]||g')
+        OLS_VERSION=$(cat "$SERVER_ROOT"/VERSION | sed 's|[.]||g')
+        LATEST_VERSION=$(curl http://open.litespeedtech.com/packages/release?ver=$OLS_VERSION 2>/dev/null | sed 's|[.]||g')
         if [ "$OLS_VERSION" -ge "$LATEST_VERSION" ] ; then
             REINSTALL=1
         fi
