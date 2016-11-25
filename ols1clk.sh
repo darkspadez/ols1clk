@@ -239,6 +239,14 @@ function update_centos_hashlib
     fi
 }
 
+function get_php_version
+{
+    # Check to see if lsphp56-mysql is installed
+    INSTALLED_PHP=$(yum list installed | grep -e lsphp56-mysql)
+    # Figure out version of php and strip periods.
+    INSTALLED_PHP=$(sed -n -e 's/.*\([[:digit:]]\+\)\.\([[:digit:]]\+\)\.\([[:digit:]]\+\)-\([[:digit:]]\+\).*/\1\2\3\4/p' <<< "$INSTALLED_PHP")
+}
+
 function install_ols_centos
 {
     local action=install
@@ -257,15 +265,16 @@ function install_ols_centos
     fi
 
     yum -y $action epel-release
-    if ! rpm -qa | grep litespeed-repo ; then
+    if [ ! $(rpm -qa | grep litespeed-repo) ] ; then
         rpm -Uvh http://rpms.litespeedtech.com/centos/litespeed-repo-1.1-1.el$OSVER.noarch.rpm
     fi
     yum -y $action openlitespeed
 
-    if [[ ! -e $SERVER_ROOT/lsphp$LSPHPVER/bin/lsphp ]]; then
+    if [ ! -e $SERVER_ROOT/lsphp$LSPHPVER/bin/lsphp ]; then
         action=install
     fi
-    if [[ "$action" = "reinstall" ]] && [[ "$LSPHPVER" = "56" ]] && [[ $(yum list installed | grep -e lsphp56-mysql | sed -n -e 's/.*\([[:digit:]]\+\)\.\([[:digit:]]\+\)\.\([[:digit:]]\+\)-\([[:digit:]]\+\).*/\1\2\3\4/p') -lt "56282" ]]; then
+    get_php_version
+    if [ "$action" = "reinstall" ] && [ "$LSPHPVER" = "56" ] && [ "$INSTALLED_PHP" -lt "56282" ]; then
         yum -y remove lsphp56-mysql
         yum -y install lsphp56-mysql
         yum -y $action lsphp$LSPHPVER lsphp$LSPHPVER-common lsphp$LSPHPVER-gd lsphp$LSPHPVER-process lsphp$LSPHPVER-mbstring lsphp$LSPHPVER-xml lsphp$LSPHPVER-mcrypt lsphp$LSPHPVER-pdo lsphp$LSPHPVER-imap
@@ -308,19 +317,19 @@ function install_ols_debian
         action="--reinstall"
     fi
 
-    if [[ ! `grep /etc/apt/sources.list.d/lst_debian_repo.list -e "deb http://rpms.litespeedtech.com/debian/"` ]]; then
+    if [ ! `grep /etc/apt/sources.list.d/lst_debian_repo.list -e "deb http://rpms.litespeedtech.com/debian/"` ]; then
         echo "deb http://rpms.litespeedtech.com/debian/ $OSVER main"  > /etc/apt/sources.list.d/lst_debian_repo.list
     fi
-    if [[ ! -e /etc/apt/trusted.gpg.d/lst_debian_repo.gpg ]]; then
+    if [ ! -e /etc/apt/trusted.gpg.d/lst_debian_repo.gpg ]; then
         wget -O /etc/apt/trusted.gpg.d/lst_debian_repo.gpg http://rpms.litespeedtech.com/debian/lst_debian_repo.gpg
     fi
-    if [[ ! -e /etc/apt/trusted.gpg.d/lst_repo.gpg ]]; then
+    if [ ! -e /etc/apt/trusted.gpg.d/lst_repo.gpg ]; then
         wget -O /etc/apt/trusted.gpg.d/lst_repo.gpg http://rpms.litespeedtech.com/debian/lst_repo.gpg
     fi
     apt-get -y update
     apt-get -y install "$action" openlitespeed
 
-    if [[ ! -e $SERVER_ROOT/lsphp$LSPHPVER/bin/lsphp ]]; then
+    if [ ! -e $SERVER_ROOT/lsphp$LSPHPVER/bin/lsphp ]; then
         action=
     fi
     apt-get -y install "$action" lsphp$LSPHPVER lsphp$LSPHPVER-mysql lsphp$LSPHPVER-imap
@@ -489,16 +498,16 @@ END
     else
         if [ "x$OSNAMEVER" = "xDEBIAN7" ] || [ "x$OSNAMEVER" = "xDEBIAN8" ] || [ "x$OSNAMEVER" = "xUBUNTU12" ] || [ "x$OSNAMEVER" = "xUBUNTU14" ] ; then
             apt-get -y install python-software-properties
-            if [[ ! `apt-key list | grep 1BB943DB` ]] ; then
+            if [ ! `apt-key list | grep 1BB943DB` ] ; then
                 apt-key adv --recv-keys --keyserver keyserver.ubuntu.com 0xcbcb082a1bb943db
             fi
         elif [ "x$OSNAMEVER" = "xDEBIAN9" ] || [ "x$OSNAMEVER" = "xUBUNTU16" ] ; then
             apt-get -y install software-properties-common
-            if [[ ! `apt-key list | grep C74CD1D8` ]] ; then
+            if [ ! `apt-key list | grep C74CD1D8` ] ; then
                 apt-key adv --recv-keys --keyserver keyserver.ubuntu.com 0xF1656F24C74CD1D8
             fi
         fi
-        if [[ ! `grep /etc/apt/sources.list.d/mariadb_repo.list -e "http://mirror.jaleco.com/mariadb/repo/10.1"` ]] ; then
+        if [ ! `grep /etc/apt/sources.list.d/mariadb_repo.list -e "http://mirror.jaleco.com/mariadb/repo/10.1"` ] ; then
             echo "deb [$MARIADBCPUARCH] http://mirror.jaleco.com/mariadb/repo/10.1/$OSNAME $OSVER main"  > /etc/apt/sources.list.d/mariadb_repo.list
         fi
 
@@ -675,14 +684,14 @@ function uninstall_result
 
 function install_ols
 {
-    if [[ -e /usr/local/lsws/bin/lshttpd ]]; then
+    if [ -e /usr/local/lsws/bin/lshttpd ]; then
         local OLS_VERSION=
         local LATEST_VERSION=
         local REINSTALL=
         OLS_VERSION=$(/usr/local/lsws/bin/lshttpd -v | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' | sed 's|[.]||g')
         LATEST_VERSION=$(curl http://open.litespeedtech.com/mediawiki/ 2>/dev/null | grep "(Stable)")
         LATEST_VERSION=$(grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' <<< "$LATEST_VERSION" | head -n1 | sed 's|[.]||g')
-        if [[ "$OLS_VERSION" -ge "$LATEST_VERSION" ]]; then
+        if [ "$OLS_VERSION" -ge "$LATEST_VERSION" ]; then
             REINSTALL=1
         fi
     fi
@@ -805,7 +814,7 @@ END
 
 function passwordSetup
 {
-    if [[ $(wc -c < /usr/local/lsws/admin/conf/htpasswd) -le 7 ]] || [[ "$OLSINSTALLED" = 0 ]]; then
+    if [ $(wc -c < /usr/local/lsws/admin/conf/htpasswd) -le 7 ] || [ "$OLSINSTALLED" = 0 ]; then
         ENCRYPT_PASS=`"$SERVER_ROOT/admin/fcgi-bin/admin_php" -q "$SERVER_ROOT/admin/misc/htpasswd.php" $ADMINPASSWORD`
         if [ $? = 0 ] ; then
             echo "admin:$ENCRYPT_PASS" > "$SERVER_ROOT/admin/conf/htpasswd"
@@ -1236,7 +1245,7 @@ check_wget
 install_ols
 passwordSetup
 
-if [[ "$PASSWORDSET" = true ]]; then
+if [ "$PASSWORDSET" = true ]; then
     echo "WebAdmin password is [$ADMINPASSWORD]." > $SERVER_ROOT/password
     echoY "Please be aware that your password was written to file '$SERVER_ROOT/password'."
 fi
